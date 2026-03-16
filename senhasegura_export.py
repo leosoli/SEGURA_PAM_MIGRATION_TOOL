@@ -29,8 +29,20 @@ def get_access_token() -> str:
     resp.raise_for_status()
     return resp.json()["access_token"]
 
+def list_credentials(token: str) -> list:
+    url = f"{BASE_URL}/api/pam/credential"
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = requests.get(url, headers=headers, timeout=30, verify=VERIFY_SSL)
+    resp.raise_for_status()
+    return resp.json().get("credentials", [])
+
+
 
 if __name__ == "__main__":
     token = get_access_token()
     print(f"Token obtido: {token[:20]}...")
+    credentials = list_credentials(token)
+    print(f"{len(credentials)} credencial(is) encontrada(s):")
+    for c in credentials:
+        print(f"  id={c.get('id')}  user={c.get('username')}  host={c.get('hostname')}")
 
