@@ -11,11 +11,13 @@ load_dotenv()
 import os
 import sys
 import requests
+import time
 
 BASE_URL      = os.getenv("SENHASEGURA_URL")
 CLIENT_ID     = os.getenv("SENHASEGURA_ID")
 CLIENT_SECRET = os.getenv("SENHASEGURA_SECRET")
 VERIFY_SSL = os.getenv("VERIFY_SSL", "true").lower() != "false"
+REQUEST_DELAY = os.getenv("REQUEST_DELAY")
 
 
 def get_access_token() -> str:
@@ -37,12 +39,23 @@ def list_credentials(token: str) -> list:
     return resp.json().get("credentials", [])
 
 
+def get_credential_detail(token: str, cred_id: str) -> dict:
+    url = f"{BASE_URL}/api/pam/credential/{cred_id}"
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = requests.get(url, headers=headers, timeout=30, verify=VERIFY_SSL)
+    resp.raise_for_status()
+    return resp.json().get("credential", {})
+
 
 if __name__ == "__main__":
     token = get_access_token()
     print(f"Token obtido: {token[:20]}...")
     credentials = list_credentials(token)
     print(f"{len(credentials)} credencial(is) encontrada(s):")
-    for c in credentials:
-        print(f"  id={c.get('id')}  user={c.get('username')}  host={c.get('hostname')}")
+    
+    for idx, item in enumerate(credentials, start=1):
+        cred_id = str(item.get("id", ""))
+        detail = get_credential_detail(token, cred_id)
+        print(f"[{idx}] {item.get('username')}@{item.get('hostname')} => senha: {detail.get('password', '???')}")
+        time.sleep(float(REQUEST_DELAY))
 
