@@ -17,7 +17,7 @@ BASE_URL      = os.getenv("SENHASEGURA_URL")
 CLIENT_ID     = os.getenv("SENHASEGURA_ID")
 CLIENT_SECRET = os.getenv("SENHASEGURA_SECRET")
 VERIFY_SSL = os.getenv("VERIFY_SSL", "true").lower() != "false"
-REQUEST_DELAY = os.getenv("REQUEST_DELAY")
+REQUEST_DELAY = float(os.getenv("REQUEST_DELAY", "0.3"))
 
 
 def get_access_token() -> str:
@@ -57,5 +57,5 @@ if __name__ == "__main__":
         cred_id = str(item.get("id", ""))
         detail = get_credential_detail(token, cred_id)
         print(f"[{idx}] {item.get('username')}@{item.get('hostname')} => senha: {detail.get('password', '???')}")
-        time.sleep(float(REQUEST_DELAY))
+        time.sleep(REQUEST_DELAY)
 
