@@ -1,6 +1,6 @@
 """
 senhasegura - Migrador de Senhas entre Vaults
-Passo 5: atualizar senha usando o identifier encontrado no destino
+Passo 6: skip de credenciais sem senha
 """
 
 import os
@@ -66,12 +66,8 @@ def find_credential(dest_creds, username, hostname, ip):
     return None
 
 
+
 def update_password(token, match, username, hostname, ip, password):
-    """
-    POST /api/pam/credential — updates an existing credential.
-    The password is sent in the 'content' field per the API spec.
-    identifier is used as the lookup key.
-    """
     url = f"{DEST_URL}/api/pam/credential"
     headers = {
         "Authorization": f"Bearer {token}",
@@ -101,6 +97,10 @@ if __name__ == "__main__":
         password = row.get("password", "").strip()
 
         print(f"[{idx}/{len(rows)}] {username}@{hostname} ...")
+
+        if not password:
+            print("  SKIP — password vazia no CSV")
+            continue
 
         match = find_credential(dest_creds, username, hostname, ip)
         if not match:
