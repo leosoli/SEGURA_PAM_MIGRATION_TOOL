@@ -1,22 +1,23 @@
-# Python
+# ── Saída sensível ────────────────────────────
+*.csv
+credentials_export.csv
+migration_report.csv
+
+# ── Variáveis de ambiente ─────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Python ────────────────────────────────────
 __pycache__/
 *.py[cod]
 .venv/
 venv/
 
-# IDEs
+# ── IDEs ──────────────────────────────────────
 .vscode/
 .idea/
 
-# OS
+# ── OS ────────────────────────────────────────
 .DS_Store
 Thumbs.db
-
-# Variaveis de ambiente
-.env
-.env.*
-!.env.example
-
-# Saida sensivel
-*.csv
-credentials_export.csv
