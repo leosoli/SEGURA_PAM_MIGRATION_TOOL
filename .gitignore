@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Variaveis de ambiente
+.env
+.env.*
+!.env.example
+
+# Saida sensivel
+*.csv
+credentials_export.csv
