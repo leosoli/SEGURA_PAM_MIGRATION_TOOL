@@ -22,6 +22,7 @@ import os
 import sys
 import requests
 from requests.adapters import HTTPAdapter
+import urllib3
 from urllib3.util.retry import Retry
 import time
 import logging
@@ -44,6 +45,8 @@ REQUEST_DELAY = float(os.getenv("REQUEST_DELAY", "0.3"))
 OUTPUT_CSV    = os.getenv("OUTPUT_CSV", "credentials_export.csv")
 # ──────────────────────────────────────────────
 
+if not VERIFY_SSL:
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logging.basicConfig(
     level=logging.INFO,

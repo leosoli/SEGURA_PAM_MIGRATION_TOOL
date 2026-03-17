@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes deste projeto serão documentadas neste arquivo.
 
+## [v1.1.1] - 2026-03-17
+
+### Corrigido
+- Supressão de avisos SSL em `senhasegura_export.py` quando `VERIFY_SSL=false`,
+  alinhando o comportamento com `senhasegura_migrate.py`
+
 ## [v1.1.0] - 2026-03-17
 
 ### Adicionado
