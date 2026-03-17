@@ -1,6 +1,6 @@
 """
 senhasegura - Migrador de Senhas entre Vaults
-Passo 4: encontrar credencial no destino por username + hostname + ip
+Passo 5: atualizar senha usando o identifier encontrado no destino
 """
 
 import os
@@ -48,29 +48,65 @@ def list_dest_credentials(token):
     return resp.json().get("credentials", [])
 
 
+
 def find_credential(dest_creds, username, hostname, ip):
+    """
+    Returns {"id": ..., "identifier": ...} of the first match,
+    or None. Matches by username + hostname or management_ip.
+    """
     for cred in dest_creds:
-        same_user = cred.get("username",       "").strip().lower() == username.strip().lower()
-        same_host = cred.get("hostname",       "").strip().lower() == hostname.strip().lower()
-        same_ip   = cred.get("management_ip",  "").strip()         == ip.strip()
+        same_user = cred.get("username",      "").strip().lower() == username.strip().lower()
+        same_host = cred.get("hostname",      "").strip().lower() == hostname.strip().lower()
+        same_ip   = cred.get("management_ip", "").strip()         == ip.strip()
         if same_user and (same_host or same_ip):
-            return str(cred.get("id"))
+            return {
+                "id":         str(cred.get("id")),
+                "identifier": cred.get("identifier", ""),
+            }
     return None
 
 
-if __name__ == "__main__":
-    token = get_access_token(DEST_URL, DEST_ID, DEST_SECRET)
-    rows = load_csv(INPUT_CSV)
-    dest_creds = list_dest_credentials(token)
+def update_password(token, match, username, hostname, ip, password):
+    """
+    POST /api/pam/credential — updates an existing credential.
+    The password is sent in the 'content' field per the API spec.
+    identifier is used as the lookup key.
+    """
+    url = f"{DEST_URL}/api/pam/credential"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type":  "application/json",
+    }
+    body = {
+        "identifier": match["identifier"],
+        "username":   username,
+        "hostname":   hostname,
+        "ip":         ip,
+        "content":    password,
+    }
+    resp = requests.post(url, json=body, headers=headers, verify=VERIFY_SSL, timeout=30)
+    resp.raise_for_status()
 
+
+if __name__ == "__main__":
+    token      = get_access_token(DEST_URL, DEST_ID, DEST_SECRET)
+    rows       = load_csv(INPUT_CSV)
+    dest_creds = list_dest_credentials(token)
     print(f"{len(rows)} credencial(is) no CSV / {len(dest_creds)} no destino.")
 
-    for row in rows:
-        username = row.get("username", "")
-        hostname = row.get("hostname", "")
-        ip       = row.get("ip",       "")
-        cred_id  = find_credential(dest_creds, username, hostname, ip)
-        if cred_id:
-            print(f"  MATCH id={cred_id}  {username}@{hostname}")
-        else:
-            print(f"  NO MATCH  {username}@{hostname} ({ip})")
+    for idx, row in enumerate(rows, start=1):
+        username = row.get("username", "").strip()
+        hostname = row.get("hostname", "").strip()
+        ip       = row.get("ip",       "").strip()
+        password = row.get("password", "").strip()
+
+        print(f"[{idx}/{len(rows)}] {username}@{hostname} ...")
+
+        match = find_credential(dest_creds, username, hostname, ip)
+        if not match:
+            print("  SKIP — sem correspondencia no destino")
+            continue
+
+        update_password(token, match, username, hostname, ip, password)
+        print(f"  OK — id={match['id']}  identifier={match['identifier']}")
+        time.sleep(REQUEST_DELAY)
