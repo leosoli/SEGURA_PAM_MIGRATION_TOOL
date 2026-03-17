@@ -1,6 +1,6 @@
 """
 senhasegura - Migrador de Senhas entre Vaults
-Passo 3: listar credenciais do vault de destino
+Passo 4: encontrar credencial no destino por username + hostname + ip
 """
 
 import os
@@ -48,12 +48,29 @@ def list_dest_credentials(token):
     return resp.json().get("credentials", [])
 
 
+def find_credential(dest_creds, username, hostname, ip):
+    for cred in dest_creds:
+        same_user = cred.get("username",       "").strip().lower() == username.strip().lower()
+        same_host = cred.get("hostname",       "").strip().lower() == hostname.strip().lower()
+        same_ip   = cred.get("management_ip",  "").strip()         == ip.strip()
+        if same_user and (same_host or same_ip):
+            return str(cred.get("id"))
+    return None
+
+
 if __name__ == "__main__":
     token = get_access_token(DEST_URL, DEST_ID, DEST_SECRET)
     rows = load_csv(INPUT_CSV)
-    print(f"{len(rows)} credencial(is) no CSV de origem.")
-
     dest_creds = list_dest_credentials(token)
-    print(f"{len(dest_creds)} credencial(is) no vault de destino.")
-    for c in dest_creds:
-        print(f"  id={c.get('id')}  {c.get('username')}@{c.get('hostname')}  ip={c.get('management_ip')}")
+
+    print(f"{len(rows)} credencial(is) no CSV / {len(dest_creds)} no destino.")
+
+    for row in rows:
+        username = row.get("username", "")
+        hostname = row.get("hostname", "")
+        ip       = row.get("ip",       "")
+        cred_id  = find_credential(dest_creds, username, hostname, ip)
+        if cred_id:
+            print(f"  MATCH id={cred_id}  {username}@{hostname}")
+        else:
+            print(f"  NO MATCH  {username}@{hostname} ({ip})")
