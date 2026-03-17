@@ -1,48 +1,62 @@
 # SEGURA_PAM_EXPORT_PASSWORDS
-Projeto de Exportação de senhas armazenadas no módulo PAM Core da solução de Privilege Access Management Segura
+Projeto de exportação de senhas armazenadas no módulo PAM Core da solução de Privileged Access Management Segura, com suporte à migração de credenciais entre vaults via API A2A.
 
-Exporta todas as credenciais disponíveis do senhasegura PAM para um arquivo CSV,
-utilizando a API A2A (OAuth 2.0 + PAM Core).
+## Scripts
 
-## Pré-requisitos
-
-- Python 3.10+
-- Acesso à API A2A do senhasegura com permissão de leitura em credenciais
+| Script | Descrição |
+|---|---|
+| `senhasegura_export.py` | Exporta todas as credenciais e senhas do vault de origem para CSV |
+| `senhasegura_migrate.py` | Lê o CSV e atualiza as senhas no vault de destino |
 
 ## Instalação
 
 ```bash
 pip install -r requirements.txt
+cp .env.example .env
+# preencha com as credenciais do seu vault
+```
+
+## Exportação
+
+```bash
+python senhasegura_export.py
+# gera credentials_export.csv
+```
+
+## Migração
+
+```bash
+python senhasegura_migrate.py
+# lê credentials_export.csv
+# localiza cada credencial no destino por username + hostname/ip
+# atualiza a senha via POST /api/pam/credential
+#   - identifier é usado como chave de busca
+#   - a senha é enviada no campo content
+# gera migration_report.csv
 ```
 
 ## Configuração
 
-```bash
-cp .env.example .env
-# edite o .env com os valores reais
-```
+| Variável | Usado por | Obrigatório | Padrão | Descrição |
+|---|---|---|---|---|
+| `SENHASEGURA_URL` | export | Sim | — | URL base do vault de origem |
+| `SENHASEGURA_ID` | export | Sim | — | Client ID da aplicação A2A de origem |
+| `SENHASEGURA_SECRET` | export | Sim | — | Client Secret da aplicação A2A de origem |
+| `DEST_URL` | migrate | Sim | — | URL base do vault de destino |
+| `DEST_ID` | migrate | Sim | — | Client ID da aplicação A2A de destino |
+| `DEST_SECRET` | migrate | Sim | — | Client Secret da aplicação A2A de destino |
+| `OUTPUT_CSV` | export | Não | `credentials_export.csv` | Arquivo de saída da exportação |
+| `INPUT_CSV` | migrate | Não | `credentials_export.csv` | Arquivo de entrada da migração |
+| `REPORT_CSV` | migrate | Não | `migration_report.csv` | Arquivo de relatório da migração |
+| `REQUEST_DELAY` | ambos | Não | `0.3` | Segundos de espera entre chamadas à API |
+| `VERIFY_SSL` | ambos | Não | `true` | Defina `false` para certificados auto-assinados |
 
-| Variável             | Obrigatória | Descrição                              |
-|----------------------|-------------|----------------------------------------|
-| SENHASEGURA_URL      | Sim         | URL base do vault (sem barra final)    |
-| SENHASEGURA_ID       | Sim         | Client ID da aplicação A2A             |
-| SENHASEGURA_SECRET   | Sim         | Client Secret da aplicação A2A         |
-| OUTPUT_CSV           | Não         | Nome do arquivo de saída (padrão: credentials_export.csv) |
-| REQUEST_DELAY        | Não         | Delay entre chamadas em segundos (padrão: 0.3) |
-| VERIFY_SSL           | Não         | Verificar certificado SSL (padrão: true) |
+## Segurança
 
-## Uso
+> ⚠️ Os CSVs gerados contêm senhas em texto plano.
+> Tanto `credentials_export.csv` quanto `migration_report.csv` estão protegidos
+> pelo `.gitignore` e jamais devem ser commitados ou compartilhados.
 
-```bash
-python senhasegura_export.py
-```
+## Changelog
 
-O arquivo `credentials_export.csv` será gerado na pasta atual.
-
-> ⚠️ O CSV contém senhas em texto plano. O arquivo está no `.gitignore`
-> e nunca deve ser versionado ou compartilhado.
-
-## Colunas do CSV
-
-`id`, `identifier`, `username`, `hostname`, `ip`, `port`, `domain`,
-`model`, `password`, `expiration_time`, `additional`, `error`
+Consulte [CHANGELOG.md](./CHANGELOG.md)
