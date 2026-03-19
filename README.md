@@ -1,6 +1,30 @@
 # SEGURA_PAM_EXPORT_PASSWORDS
 Projeto de exportação de senhas armazenadas no módulo PAM Core da solução de Privileged Access Management Segura, com suporte à migração de credenciais entre vaults via API A2A.
 
+## Compatibilidade de versões
+
+| Versão Segura | Endpoint utilizado | Suporte |
+|---|---|---|
+| 3.33, 4.0, 4.2.x | `/api/*` | ✅ Suportado |
+| 3.30, 3.31, 3.32 | `/iso/*` | 🔜 Compatibilidade prevista para versões futuras |
+
+> ℹ️ Versões como `4.2.0-6` seguem o padrão `MAJOR.MINOR.PATCH-BUILD` e são tratadas como pertencentes à sua série minor (ex: `4.2`).
+
+## Pré-requisitos
+
+### Vault de origem
+- Versão Segura 3.33 ou superior
+- Aplicação A2A configurada com permissão de **leitura** em credenciais
+- As credenciais a serem exportadas devem estar cadastradas no vault
+
+### Vault de destino
+- Versão Segura 3.33 ou superior
+- Aplicação A2A configurada com permissão de **leitura e escrita** em credenciais
+- As credenciais devem estar **previamente cadastradas** no vault de destino via importação em lote pelo template Excel do Segura (`Batch Import`)
+- Os campos `username`, `hostname` e `management ip` devem ser **idênticos** aos do vault de origem — são usados como chave de correspondência durante a migração
+
+> ⚠️ O script **não cria** credenciais no destino. Ele apenas atualiza a senha de credenciais já existentes. Credenciais sem correspondência serão ignoradas e registradas no relatório com status `skipped`.
+
 ## Scripts
 
 | Script | Descrição |
