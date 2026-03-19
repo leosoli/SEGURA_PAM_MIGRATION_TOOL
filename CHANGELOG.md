@@ -2,11 +2,21 @@
 
 Todas as mudanças relevantes deste projeto serão documentadas neste arquivo.
 
+## [v1.1.2] - 2026-03-18
+
+### Documentação
+- Adicionada tabela de compatibilidade de versões do Segura com os endpoints `/api/*` e `/iso/*`
+- Nota sobre o padrão de versionamento `MAJOR.MINOR.PATCH-BUILD` (ex: `4.2.0-6`)
+- Versões 3.30, 3.31 e 3.32 (endpoint `/iso/*`) não são suportadas ainda — compatibilidade prevista para versões futuras
+- Adicionada seção de pré-requisitos separando vault de origem e destino
+- Documentado que as credenciais do destino devem ser previamente cadastradas via Batch Import do Segura
+- Documentado que `username`, `hostname` e `management ip` devem ser idênticos entre os dois vaults
+- Documentado que o script não cria credenciais — apenas atualiza senhas de credenciais existentes
+
 ## [v1.1.1] - 2026-03-17
 
 ### Corrigido
-- Supressão de avisos SSL em `senhasegura_export.py` quando `VERIFY_SSL=false`,
-  alinhando o comportamento com `senhasegura_migrate.py`
+- Supressão de avisos SSL em `senhasegura_export.py` quando `VERIFY_SSL=false`, alinhando o comportamento com `senhasegura_migrate.py`
 
 ## [v1.1.0] - 2026-03-17
 
