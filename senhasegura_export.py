@@ -3,17 +3,16 @@ senhasegura API - Exportador de Credenciais para CSV
 =====================================================
 Conecta à API PAM Core (A2A) do senhasegura usando OAuth 2.0,
 lista todas as credenciais disponíveis, busca a senha de cada uma
-e salva o resultado em um arquivo CSV.
+e salva o resultado em credentials_export.csv.
 
-Documentação de referência:
-  - GET /api/pam/credential        -> lista todas as credenciais
-  - GET /api/pam/credential/[id]   -> detalhe (inclui password)
-  - POST /iso/oauth2/token         -> token OAuth 2.0
+Versoes suportadas:
+  - 3.33, 4.0, 4.2.x → endpoint /api/
+  - 3.30, 3.31, 3.32  → endpoint /iso/
 
-Pré-requisitos:
+Pre-requisitos:
   pip install -r requirements.txt
 
-Configuração:
+Configuracao:
   Copie .env.example para .env e preencha com os valores reais.
 """
 
@@ -28,6 +27,7 @@ import time
 import logging
 from dataclasses import dataclass, asdict
 import csv
+from api_prefix import api_prefix
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -38,11 +38,11 @@ load_dotenv()
 BASE_URL      = os.getenv("SENHASEGURA_URL")
 CLIENT_ID     = os.getenv("SENHASEGURA_ID")
 CLIENT_SECRET = os.getenv("SENHASEGURA_SECRET")
+VERSION       = os.getenv("SENHASEGURA_VERSION", "4.2")
 
-# Padroes nao-sensiveis podem manter fallback
-VERIFY_SSL = os.getenv("VERIFY_SSL", "true").lower() != "false"
-REQUEST_DELAY = float(os.getenv("REQUEST_DELAY", "0.3"))
 OUTPUT_CSV    = os.getenv("OUTPUT_CSV", "credentials_export.csv")
+REQUEST_DELAY = float(os.getenv("REQUEST_DELAY", "0.3"))
+VERIFY_SSL    = os.getenv("VERIFY_SSL", "true").lower() != "false"
 # ──────────────────────────────────────────────
 
 if not VERIFY_SSL:
@@ -91,10 +91,8 @@ SESSION = build_session()
 
 
 
-
-
-def get_access_token() -> str:
-    url = f"{BASE_URL}/api/oauth2/token"
+def get_access_token(prefix: str) -> str:
+    url = f"{BASE_URL}{prefix}/oauth2/token"
     payload = {
         "grant_type":    "client_credentials",
         "client_id":     CLIENT_ID,
@@ -105,10 +103,7 @@ def get_access_token() -> str:
         resp = SESSION.post(url, data=payload, verify=VERIFY_SSL, timeout=30)
         resp.raise_for_status()
     except requests.exceptions.SSLError:
-        log.error(
-            "Erro de SSL. Se o servidor usa certificado auto-assinado, "
-            "defina VERIFY_SSL=false (apenas para ambientes de teste)."
-        )
+        log.error("Erro SSL. Defina VERIFY_SSL=false para certificados auto-assinados.")
         sys.exit(1)
     except requests.exceptions.ConnectionError as exc:
         log.error("Nao foi possivel conectar em %s: %s", BASE_URL, exc)
@@ -129,10 +124,8 @@ def get_access_token() -> str:
 
 
 
-
-
-def list_credentials(token: str) -> list:
-    url = f"{BASE_URL}/api/pam/credential"
+def list_credentials(token: str, prefix: str) -> list:
+    url = f"{BASE_URL}{prefix}/pam/credential"
     headers = {"Authorization": f"Bearer {token}"}
     log.info("Buscando lista de credenciais ...")
     resp = SESSION.get(url, headers=headers, verify=VERIFY_SSL, timeout=30)
@@ -144,15 +137,12 @@ def list_credentials(token: str) -> list:
 
 
 
-
-def get_credential_detail(token: str, cred_id: str) -> dict:
-    url = f"{BASE_URL}/api/pam/credential/{cred_id}"
+def get_credential_detail(token: str, cred_id: str, prefix: str) -> dict:
+    url = f"{BASE_URL}{prefix}/pam/credential/{cred_id}"
     headers = {"Authorization": f"Bearer {token}"}
     resp = SESSION.get(url, headers=headers, verify=VERIFY_SSL, timeout=30)
     resp.raise_for_status()
     return resp.json().get("credential", {})
-
-
 
 
 
@@ -168,26 +158,28 @@ def export_to_csv(credentials: list, path: str) -> None:
 
 
 
-
 def main() -> None:
-    # Validacao — falha imediatamente se alguma variavel obrigatoria estiver ausente
     missing = [name for name, val in [
-        ("SENHASEGURA_URL",    BASE_URL),
-        ("SENHASEGURA_ID",     CLIENT_ID),
-        ("SENHASEGURA_SECRET", CLIENT_SECRET),
+        ("SENHASEGURA_URL",     BASE_URL),
+        ("SENHASEGURA_ID",      CLIENT_ID),
+        ("SENHASEGURA_SECRET",  CLIENT_SECRET),
+        ("SENHASEGURA_VERSION", VERSION),
     ] if not val]
 
     if missing:
         log.error(
             "Variavel(is) obrigatoria(s) nao definida(s): %s\n"
-            "Crie um arquivo .env baseado no .env.example e preencha os valores.",
+            "Adicione-as ao .env e tente novamente.",
             ", ".join(missing)
         )
         sys.exit(1)
 
-    token = get_access_token()
-    raw_list = list_credentials(token)
-    results = []
+    prefix = api_prefix(VERSION)
+    log.info("Vault de origem: versao=%s  prefixo=%s", VERSION, prefix)
+
+    token    = get_access_token(prefix)
+    raw_list = list_credentials(token, prefix)
+    results  = []
 
     for idx, item in enumerate(raw_list, start=1):
         cred_id = str(item.get("id", ""))
@@ -202,7 +194,7 @@ def main() -> None:
         )
 
         try:
-            detail = get_credential_detail(token, cred_id)
+            detail = get_credential_detail(token, cred_id, prefix)
             cred.password        = detail.get("password", "")
             cred.port            = detail.get("port", "")
             cred.domain          = detail.get("domain", "")
@@ -225,8 +217,6 @@ def main() -> None:
 
     export_to_csv(results, OUTPUT_CSV)
     log.info("Concluido. %d credencial(is) exportada(s).", len(results))
-
-
 
 
 if __name__ == "__main__":
