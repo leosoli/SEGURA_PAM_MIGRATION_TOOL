@@ -3,7 +3,11 @@ senhasegura - Migrador de Senhas entre Vaults
 =============================================
 Le o CSV gerado pelo senhasegura_export.py, busca cada credencial
 no vault de destino por username + hostname/ip, e atualiza a senha
-via POST /api/pam/credential usando identifier e o campo content.
+via POST usando identifier e o campo content.
+
+Versoes suportadas:
+  - 3.33, 4.0, 4.2.x → endpoint /api/
+  - 3.30, 3.31, 3.32  → endpoint /iso/
 
 Pre-requisitos:
   pip install -r requirements.txt
@@ -22,6 +26,7 @@ import urllib3
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from dataclasses import dataclass, asdict
+from api_prefix import api_prefix
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -32,6 +37,7 @@ load_dotenv()
 DEST_URL      = os.getenv("DEST_URL")
 DEST_ID       = os.getenv("DEST_ID")
 DEST_SECRET   = os.getenv("DEST_SECRET")
+DEST_VERSION  = os.getenv("DEST_VERSION", "4.2")
 INPUT_CSV     = os.getenv("INPUT_CSV",  "credentials_export.csv")
 REPORT_CSV    = os.getenv("REPORT_CSV", "migration_report.csv")
 REQUEST_DELAY = float(os.getenv("REQUEST_DELAY", "0.3"))
@@ -80,8 +86,8 @@ def build_session():
 SESSION = build_session()
 
 
-def get_access_token(base_url, client_id, client_secret):
-    url = f"{base_url}/api/oauth2/token"
+def get_access_token(base_url, client_id, client_secret, prefix):
+    url = f"{base_url}{prefix}/oauth2/token"
     payload = {
         "grant_type":    "client_credentials",
         "client_id":     client_id,
@@ -110,6 +116,7 @@ def get_access_token(base_url, client_id, client_secret):
     return token
 
 
+
 def load_csv(path):
     if not os.path.exists(path):
         log.error("Arquivo CSV nao encontrado: %s", path)
@@ -118,8 +125,8 @@ def load_csv(path):
         return list(csv.DictReader(fh))
 
 
-def list_dest_credentials(token):
-    url = f"{DEST_URL}/api/pam/credential"
+def list_dest_credentials(token, prefix):
+    url = f"{DEST_URL}{prefix}/pam/credential"
     headers = {"Authorization": f"Bearer {token}"}
     log.info("Listando credenciais no vault de destino ...")
     resp = SESSION.get(url, headers=headers, verify=VERIFY_SSL, timeout=30)
@@ -142,8 +149,8 @@ def find_credential(dest_creds, username, hostname, ip):
     return None
 
 
-def update_password(token, match, username, hostname, ip, password):
-    url = f"{DEST_URL}/api/pam/credential"
+def update_password(token, match, username, hostname, ip, password, prefix):
+    url = f"{DEST_URL}{prefix}/pam/credential"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type":  "application/json",
@@ -169,11 +176,13 @@ def save_report(results, path):
     log.info("Relatorio salvo em: %s", path)
 
 
+
 def main():
     missing = [name for name, val in [
-        ("DEST_URL",    DEST_URL),
-        ("DEST_ID",     DEST_ID),
-        ("DEST_SECRET", DEST_SECRET),
+        ("DEST_URL",     DEST_URL),
+        ("DEST_ID",      DEST_ID),
+        ("DEST_SECRET",  DEST_SECRET),
+        ("DEST_VERSION", DEST_VERSION),
     ] if not val]
 
     if missing:
@@ -184,9 +193,12 @@ def main():
         )
         sys.exit(1)
 
-    token      = get_access_token(DEST_URL, DEST_ID, DEST_SECRET)
+    prefix = api_prefix(DEST_VERSION)
+    log.info("Vault de destino: versao=%s  prefixo=%s", DEST_VERSION, prefix)
+
+    token      = get_access_token(DEST_URL, DEST_ID, DEST_SECRET, prefix)
     rows       = load_csv(INPUT_CSV)
-    dest_creds = list_dest_credentials(token)
+    dest_creds = list_dest_credentials(token, prefix)
     log.info("%d credencial(is) carregada(s) do CSV.", len(rows))
 
     results = []
@@ -219,7 +231,7 @@ def main():
             continue
 
         try:
-            update_password(token, match, username, hostname, ip, password)
+            update_password(token, match, username, hostname, ip, password, prefix)
             log.info("  OK — id=%s  identifier=%s", match["id"], match["identifier"])
             result.dest_id    = match["id"]
             result.identifier = match["identifier"]
