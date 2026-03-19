@@ -1,6 +1,15 @@
 # SEGURA_PAM_EXPORT_PASSWORDS
 Projeto de exportação de senhas armazenadas no módulo PAM Core da solução de Privileged Access Management Segura, com suporte à migração de credenciais entre vaults via API A2A.
 
+## Compatibilidade de versões
+
+| Versão Segura | Endpoint utilizado | Suporte |
+|---|---|---|
+| 3.33, 4.0, 4.2.x | `/api/*` | ✅ Suportado |
+| 3.30, 3.31, 3.32 | `/iso/*` | 🔜 Compatibilidade prevista para versões futuras |
+
+> ℹ️ Versões como `4.2.0-6` seguem o padrão `MAJOR.MINOR.PATCH-BUILD` e são tratadas como pertencentes à sua série minor (ex: `4.2`).
+
 ## Scripts
 
 | Script | Descrição |
