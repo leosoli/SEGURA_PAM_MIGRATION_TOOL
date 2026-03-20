@@ -2,6 +2,30 @@
 
 Todas as mudanças relevantes deste projeto serão documentadas neste arquivo.
 
+## [v1.3.0] - 2026-03-18
+
+### Adicionado
+- `compare_credentials.py` — compara o CSV exportado contra a planilha xlsx de escopo
+- Quatro status de comparação por credencial:
+  - `matched` — ID + username + IP corretos — seguro para migrar
+  - `missing` — no escopo xlsx mas ausente no CSV exportado
+  - `ghost` — mesmo username+ip existe no xlsx mas com ID diferente — credencial fantasma autorizada no A2A em vez da real — remover do A2A e reautorizar com o ID correto
+  - `out_of_scope` — no CSV exportado mas sem nenhuma correspondência no xlsx — autorizada no A2A fora do escopo de migração
+- Relatório `comparison_report.csv` com status e detalhe por credencial
+- Variáveis `SCOPE_XLSX`, `SCOPE_SHEET` e `COMPARISON_REPORT` adicionadas ao `.env.example`
+- `*.xlsx` adicionado ao `.gitignore` — todos os arquivos xlsx protegidos por padrão
+- `comparison_report.csv` adicionado ao `.gitignore`
+- Dependências `pandas` e `openpyxl` adicionadas ao `requirements.txt`
+
+### Colunas esperadas na planilha xlsx
+`IP | ID | Device | Name | Planilha import | Nome Igual | Importar | Username | Type | Just in time | Additional | Domain | Cred Tags | Dev Tags | Managed? | Template | Status | Execution date | Last attempt`
+
+Mapeamento utilizado:
+- `IP` → management ip da credencial
+- `ID` → ID da credencial no vault
+- `Name` → nome do dispositivo ao qual a credencial pertence
+- `Username` → username da credencial
+
 ## [v1.2.0] - 2026-03-18
 
 ### Adicionado
@@ -14,13 +38,11 @@ Todas as mudanças relevantes deste projeto serão documentadas neste arquivo.
 ### Documentação
 - Tabela de compatibilidade atualizada — ambos os endpoints `/api/*` e `/iso/*` agora marcados como suportados
 - Pré-requisitos atualizados — versão mínima alterada de 3.33 para 3.30
-- `api_prefix.py` adicionado à tabela de scripts
 
 ## [v1.1.2] - 2026-03-18
 
 ### Documentação
 - Adicionada tabela de compatibilidade de versões do Segura com os endpoints `/api/*` e `/iso/*`
-- Nota sobre o padrão de versionamento `MAJOR.MINOR.PATCH-BUILD` (ex: `4.2.0-6`)
 - Adicionada seção de pré-requisitos separando vault de origem e destino
 - Documentado que as credenciais do destino devem ser previamente cadastradas via Batch Import do Segura
 - Documentado que `username`, `hostname` e `management ip` devem ser idênticos entre os dois vaults
@@ -38,10 +60,7 @@ Todas as mudanças relevantes deste projeto serão documentadas neste arquivo.
 - Configuração do vault de destino via variáveis `DEST_URL`, `DEST_ID`, `DEST_SECRET`
 - Correspondência de credenciais por `username` + `hostname` ou `management_ip`
 - Atualização de senha via `POST /pam/credential` usando `identifier` como chave de busca e `content` como campo da senha
-- Variáveis `INPUT_CSV` e `REPORT_CSV` para configuração dos arquivos de entrada e saída
-- Lógica de skip para credenciais com `password` vazia ou sem correspondência no destino
 - Relatório de migração salvo em `migration_report.csv`
-- `migration_report.csv` adicionado ao `.gitignore`
 - Supressão de avisos SSL quando `VERIFY_SSL=false`
 
 ## [v1.0.0] - 2026-03-17
@@ -58,4 +77,4 @@ Todas as mudanças relevantes deste projeto serão documentadas neste arquivo.
 - Validação de variáveis de ambiente obrigatórias na inicialização
 - Controle de verificação SSL via variável `VERIFY_SSL`
 - Delay configurável entre chamadas via variável `REQUEST_DELAY`
-- `credentials_export.csv` e todos os CSVs protegidos no `.gitignore`
+- Todos os CSVs protegidos no `.gitignore`

@@ -2,6 +2,10 @@
 *.csv
 credentials_export.csv
 migration_report.csv
+comparison_report.csv
+
+# ── Arquivos xlsx (podem conter dados sensíveis) ──
+*.xlsx
 
 # ── Variáveis de ambiente ─────────────────────
 .env
